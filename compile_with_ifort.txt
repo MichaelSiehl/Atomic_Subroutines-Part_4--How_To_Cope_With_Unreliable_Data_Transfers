@@ -1,0 +1,1 @@
+ifort -coarray -coarray-num-images=6 OOOGglob_Globals.f90 OOOEerro_admError.f90 OOOPimsc_admImageStatus_CA.f90 Main.f90 -o a.out
