@@ -1,0 +1,8 @@
+To compile the example program with OpenCoarrays/GFortran on Linux:
+
+mpifort -fcoarray=lib -L/home/ms/OpenCoarrays_1_9/OpenCoarrays-master/src/mpi OOOGglob_Globals.f90 OOOEerro_admError.f90 OOOPimsc_admImageStatus_CA.f90 Main.f90 -lcaf_mpi -o a_gfortran.out
+(Here, '/home/ms/OpenCoarrays_1_9/OpenCoarrays-master/src/mpi' must be replaced by the actual path to your OpenCoarrays installation)
+
+Please run the program with 6 coarray images:
+
+mpirun -np 6 ./a_gfortran.out
