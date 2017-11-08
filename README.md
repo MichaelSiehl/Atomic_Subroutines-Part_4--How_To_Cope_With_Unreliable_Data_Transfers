@@ -36,4 +36,16 @@ Here, the 'remote abort of synchronization status' is FALSE. Thus, the synchroni
 ```
 Here, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The ' number of successful remote synchronizations' is 0: none of the customized Event Post from the involved remote images did synchronize successfully with the customized Event Wait on image 1.<br />
 
+3. The synchronization process does only partly complete successfully, some of the involved coarray images did fail to complete the synchronization process:
+```fortran
+involved remote images:                        2           3           4           0
+ and the additional atomic values:              4           6           8           0
+ Event-Wait+Scalar done on image:           1
+ remote abort of synchronization (TRUE/FALSE): T
+ remote image that did the abort:           6
+ number of successful remote synchronizations:           3
+ the successful image numbers:           3           2           4           0
+```
+Again, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The 'number of successful remote synchronizations' is 3: three of the involved remote images (2,3,4) did synchronize successfully with the customized Event Wait on image 1, one coarray image did fail to synchronize. The synchronization process must be repeated (a retry) only for the failed coarray image.<br />
+
 
