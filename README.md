@@ -48,3 +48,95 @@ involved remote images:                        2           3           4        
 ```
 Again, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The 'number of successful remote synchronizations' is 3: three of the involved remote images (2,3,4) did synchronize successfully with the customized Event Wait on image 1, one coarray image did fail to synchronize. The synchronization process (customized Event Post + customized Event Wait) must be repeated (a retry) only for the failed coarray image.<br />
 
+# Main.f90: a simple test case
+The test case should be compiled and run with 6 coarray images using OpenCoarrays/gfortran. Main.f90 contains the logic codes of this simple test case: on coarray image 1 we do execute the customized Event Wait to synchronize with a customized Event Post from coarray images 2,3,4,and 5; On coarray image 6 we do initiate (with a small time shift) a remote abort of the customized Event Wait on coarray image 1. (If necessary, we use one of the involved images 2,3,4,5 to do nothing on it so that the synchronization does (partly) fail). See the code of the test case in Main.f90:
+```fortran
+program Main
+  ! a simple test-case for the customized Event Post / Event Wait
+  ! (customized Event Wait with integrated synchronization abort and
+  ! with integrated synchronization diagnostics)
+  !
+  use OOOGglob_Globals
+  use OOOEerro_admError
+  use OOOPimsc_admImageStatus_CA
+  implicit none
+  !
+  integer(OOOGglob_kint) :: intNumberOfRemoteImages
+  integer(OOOGglob_kint), dimension (1:4) :: intA_RemoteImageNumbers ! please compile and run this coarray
+                                                                     ! program with 6 coarray images
+  integer(OOOGglob_kint) :: intImageActivityFlag
+  integer(OOOGglob_kint), dimension (1:4, 1:2) :: intA_RemoteImageAndItsAdditionalAtomicValue
+  integer(OOOGglob_kint) :: intRemoteImageNumber
+  integer(OOOGglob_kint) :: intEnumStepWidth
+  integer(OOOGglob_kint) :: intAdditionalAtomicValue
+  integer(OOOGglob_kint) :: intCheckRemoteAbortOfSynchronization
+  logical(OOOGglob_klog) :: logRemoteAbortOfSynchronization
+  integer(OOOGglob_kint) :: intRemoteImageThatDidTheAbort
+  integer(OOOGglob_kint) :: intNumberOfSuccessfulRemoteSynchronizations
+  integer(OOOGglob_kint), dimension (1:4) :: intA_TheSuccessfulImageNumbers
+  integer(OOOGglob_kint) :: intCount
+  !
+  !************************************************************************************************
+  if (this_image() == 1) then ! do a customized Event Wait on image 1
+    !
+    intNumberOfRemoteImages = 4
+    intA_RemoteImageNumbers = (/2,3,4,5/)
+    !
+    ! wait until all the involved remote image(s) do signal that they are in status InitiateASynchronization:
+    intImageActivityFlag = OOOPimscEnum_ImageActivityFlag % InitiateASynchronization
+    intCheckRemoteAbortOfSynchronization = OOOPimscEnum_ImageActivityFlag % RemoteAbortOfSynchronization
+    !
+    ! spin-wait loop synchronization with emergency exit enabled (due to the intCheckRemoteAbortOfSynchronization
+    ! argument):
+    call OOOPimscEventWaitScalar_intImageActivityFlag99_CA (OOOPimscImageStatus_CA_1, intImageActivityFlag, &
+                intNumberOfRemoteImages, intA_RemoteImageNumbers, &
+                intA_RemoteImageAndItsAdditionalAtomicValue = intA_RemoteImageAndItsAdditionalAtomicValue, &
+                intCheckRemoteAbortOfSynchronization = intCheckRemoteAbortOfSynchronization, &
+                logRemoteAbortOfSynchronization = logRemoteAbortOfSynchronization, &
+                intRemoteImageThatDidTheAbort = intRemoteImageThatDidTheAbort, &
+                intNumberOfSuccessfulRemoteSynchronizations = intNumberOfSuccessfulRemoteSynchronizations, &
+                intA_TheSuccessfulImageNumbers = intA_TheSuccessfulImageNumbers)
+    !
+    write(*,*) 'invovled remote images:             ', intA_RemoteImageAndItsAdditionalAtomicValue(:,1)
+    write(*,*) 'and the additional atomic values:   ', intA_RemoteImageAndItsAdditionalAtomicValue(:,2)
+    write(*,*) 'Event-Wait+Scalar done on image:', this_image()
+    write(*,*) 'remote abort of synchronization (TRUE/FALSE):', logRemoteAbortOfSynchronization
+    write(*,*) 'remote image that did the abort:', intRemoteImageThatDidTheAbort
+    write(*,*) 'number of successful remote synchronizations:', intNumberOfSuccessfulRemoteSynchronizations
+    write(*,*) 'the successful image numbers:', intA_TheSuccessfulImageNumbers
+  !************************************************************************************************
+!  else if (this_image() == 4) then
+    ! do nothing on image 4, so that the synchronization (customized Event Wait on image 1) must fail
+  !************************************************************************************************
+  else if (this_image() == 6) then ! image 6 is not involved with the synchronization itself,
+                                   ! but only to abort the customized Event Wait synchronization on image 1:
+    do intCount = 1, 99999999
+      ! wait some time before doing the RemoteAbortOfSynchronization
+    end do
+    ! do abort the customized Event Wait on image 1:
+    intRemoteImageNumber = 1
+    intImageActivityFlag = OOOPimscEnum_ImageActivityFlag % RemoteAbortOfSynchronization
+    ! here, we use the customized Event Post to abort the synchronization from coarray image 6,
+    ! which itself is not part of the synchronization:
+    call OOOPimscEventPostScalar_intImageActivityFlag99_CA (OOOPimscImageStatus_CA_1, intImageActivityFlag, &
+                         intRemoteImageNumber, logExecuteSyncMemory = .true., &
+                         intAdditionalAtomicValue = this_image())
+  !************************************************************************************************
+  else ! on all other images do a customized Event Post as part of the synchronization:
+       ! (with current processors (OpenCoarrays/gfortran) it is highly possible that this may fail)
+    intRemoteImageNumber = 1
+    intImageActivityFlag = OOOPimscEnum_ImageActivityFlag % InitiateASynchronization
+    intAdditionalAtomicValue = this_image() * 2 ! only a test case
+    intEnumStepWidth = OOOPimscEnum_ImageActivityFlag % Enum_StepWidth ! only for error checking
+    ! - signal to the remote image (image 1) that this image is now in state 'InitiateASynchronization':
+    !
+    call OOOPimscEventPostScalar_intImageActivityFlag99_CA (OOOPimscImageStatus_CA_1, intImageActivityFlag, &
+                         intRemoteImageNumber, intArrayIndex = this_image(), logExecuteSyncMemory = .true., &
+                         intAdditionalAtomicValue = intAdditionalAtomicValue, intEnumStepWidth = intEnumStepWidth)
+  !************************************
+  end if
+  !
+!  write (*,*) 'execution finsished on image ', this_image()
+  !
+end program Main
+```
