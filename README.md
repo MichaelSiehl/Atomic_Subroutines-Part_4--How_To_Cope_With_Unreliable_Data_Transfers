@@ -13,7 +13,7 @@ See the following outputs from distinct program runs:<br />
 
 1. The synchronization process as a whole does complete successfully:
 ```fortran
- invovled remote images:                        2           3           4           5
+ involved remote images:                        2           3           4           5
  and the additional atomic values:              4           6           8          10
  Event-Wait+Scalar done on image:           1
  remote abort of synchronization (TRUE/FALSE): F
@@ -22,6 +22,18 @@ See the following outputs from distinct program runs:<br />
  the successful image numbers:           3           4           5           2
 
 ```
-Here, the 'remote abort of synchronization status' is FALSE. Thus, the synchronization process did complete successfully before the synchronization abort was initiated remotely.<br />
+Here, the 'remote abort of synchronization status' is FALSE. Thus, the synchronization process as a whole did complete successfully before the synchronization abort was initiated remotely.<br />
+
+2. The synchronization process as a whole does fail completely :
+```fortran
+ involved remote images:                        0           0           0           0
+ and the additional atomic values:              0           0           0           0
+ Event-Wait+Scalar done on image:           1
+ remote abort of synchronization (TRUE/FALSE): T
+ remote image that did the abort:           6
+ number of successful remote synchronizations:           0
+ the successful image numbers:           0           0           0           0
+```
+Here, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The ' number of successful remote synchronizations' is 0: none of the Event Post from the involved remote images did synchronize successfully with the customized Event Wait on image 1.<br />
 
 
