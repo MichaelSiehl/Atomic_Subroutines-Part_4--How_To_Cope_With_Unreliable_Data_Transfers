@@ -46,6 +46,5 @@ involved remote images:                        2           3           4        
  number of successful remote synchronizations:           3
  the successful image numbers:           3           2           4           0
 ```
-Again, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The 'number of successful remote synchronizations' is 3: three of the involved remote images (2,3,4) did synchronize successfully with the customized Event Wait on image 1, one coarray image did fail to synchronize. The synchronization process must be repeated (a retry) only for the failed coarray image.<br />
-
+Again, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The 'number of successful remote synchronizations' is 3: three of the involved remote images (2,3,4) did synchronize successfully with the customized Event Wait on image 1, one coarray image did fail to synchronize. The synchronization process (customized Event Post + customized Event Wait) must be repeated (a retry) only for the failed coarray image.<br />
 
