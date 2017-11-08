@@ -140,3 +140,174 @@ program Main
   !
 end program Main
 ```
+# The customized Event Wait (EventWaitScalar)
+The customized Event Wait synchronization procedure (EventWaitScalar), in the OOOPimsc_admImageStatus_CA.f90 source code file, does contain a kind of emergency exit: the functionality to check for a synchronization abort through a customized Event Post from another coarray image. The EventWaitScalar does also provide the synchronization diagnostics through its optional arguments:
+
+```fortran
+subroutine OOOPimscEventWaitScalar_intImageActivityFlag99_CA (Object_CA, intCheckImageActivityFlag, &
+                  intNumberOfImages, intA_RemoteImageNumbers, logArrayIndexIsThisImage, &
+                  intA_RemoteImageAndItsAdditionalAtomicValue, logExecuteSyncMemory, &
+                  intCheckRemoteAbortOfSynchronization, logRemoteAbortOfSynchronization, intRemoteImageThatDidTheAbort, &
+                  intNumberOfSuccessfulRemoteSynchronizations, intA_TheSuccessfulImageNumbers)
+  ! customized Event Wait plus Scalar:
+  ! (An optional (limited size integer) scalar value will be unpacked in the intA_RemoteImageAndItsAdditionalAtomicValue(:,2)
+  ! optional output argument)
+  !
+  ! This routine is for atomic bulk synchronization (among the executing image and one or more remote images)
+  ! using a spin-wait loop synchronizaton. Thus, the procedure implements a customized synchronization
+  ! using atomic subroutines and the sync memory statement internally. Ordered execution segments among the involved images
+  ! are not required.
+  !
+  ! Remote data transfer through atomic_define may be unreliable. Thus, this procedure implements a way to abort the
+  ! synchronization from another coarray image (that is usually not involved with the synchronization itself),
+  ! through the intCheckRemoteAbortOfSynchronization argument. Further, and in case of such a synchronization abort,
+  ! this routine gives a synchronization diagnostic (through its logRemoteAbortOfSynchronization, intRemoteImageThatDidTheAbort,
+  ! intNumberOfSuccessfulRemoteSynchronizations, and intA_TheSuccessfulImageNumbers optional arguments).
+  !
+  type (OOOPimsc_adtImageStatus_CA), codimension[*], intent (inout) :: Object_CA
+  integer(OOOGglob_kint), intent (in) :: intCheckImageActivityFlag
+  integer(OOOGglob_kint), intent (in) :: intNumberOfImages ! these are the number of involved remote images
+  integer(OOOGglob_kint), dimension (1:intNumberOfImages), intent (in) :: intA_RemoteImageNumbers
+  logical(OOOGglob_klog), optional, intent (in) :: logArrayIndexIsThisImage
+  logical(OOOGglob_klog) :: logArrIndexIsThisImage
+  integer(OOOGglob_kint) :: intArrIndex
+  integer(OOOGglob_kint), optional, dimension (1:intNumberOfImages, 1:2), intent (out) :: &
+                                                       intA_RemoteImageAndItsAdditionalAtomicValue
+  integer(OOOGglob_kint) :: intCount
+  integer(OOOGglob_kint) :: intImageNumber
+  logical(OOOGglob_klog), dimension (1:intNumberOfImages) :: logA_CheckImageStates
+  integer(OOOGglob_kint) :: intAtomicValue = 0
+  logical(OOOGglob_klog), optional, intent (in) :: logExecuteSyncMemory
+  logical(OOOGglob_klog) :: logSyncMemoryExecution
+  integer(OOOGglob_kint) :: intMaxVal
+  !
+  integer(OOOGglob_kint), optional, intent (in) :: intCheckRemoteAbortOfSynchronization
+  logical(OOOGglob_klog), optional, intent (out) :: logRemoteAbortOfSynchronization
+  integer(OOOGglob_kint), optional, intent (out) :: intRemoteImageThatDidTheAbort
+  integer(OOOGglob_kint), optional, intent (out) :: intNumberOfSuccessfulRemoteSynchronizations
+  integer(OOOGglob_kint), optional, dimension (1:intNumberOfImages), intent (out) :: intA_TheSuccessfulImageNumbers
+  integer(OOOGglob_kint) :: intCurrentPosition
+  !
+  integer(OOOGglob_kint) :: status = 0 ! error status
+  !
+                                                                call OOOGglob_subSetProcedures &
+                                            ("OOOPimscEventWaitScalar_intImageActivityFlag99_CA")
+  !
+  !**********************************************************************
+  !
+  if (present(intA_RemoteImageAndItsAdditionalAtomicValue)) &
+                              intA_RemoteImageAndItsAdditionalAtomicValue(:,:) = 0 ! initial value
+  !
+  if (present(intA_TheSuccessfulImageNumbers)) intA_TheSuccessfulImageNumbers = 0 ! initial value
+  !****
+  if (present(logArrayIndexIsThisImage)) then
+    logArrIndexIsThisImage = logArrayIndexIsThisImage
+  else ! default:
+    logArrIndexIsThisImage = .false.
+  end if
+  !****
+  if (present(logExecuteSyncMemory)) then
+    logSyncMemoryExecution = logExecuteSyncMemory
+  else ! default:
+    logSyncMemoryExecution = .true.
+  end if
+  !****
+  !
+  if (present(logRemoteAbortOfSynchronization)) then
+    logRemoteAbortOfSynchronization = .false. ! initial value
+  end if
+  !****
+  if (present(intRemoteImageThatDidTheAbort)) then
+    intRemoteImageThatDidTheAbort = 0 ! initial value
+  end if
+  !****
+  if (present(intNumberOfSuccessfulRemoteSynchronizations)) then
+    intNumberOfSuccessfulRemoteSynchronizations = 0 ! initial value
+  end if
+  !****
+  ! initialize the array elements with .false.:
+  logA_CheckImageStates = .false.
+  !
+  !**********************************************************************
+  ! wait until all the involved remote image(s) do signal that they are in state intCheckImageActivityFlag
+  ! spin-wait loop synchronization:
+  do
+    do intCount = 1, intNumberOfImages
+      !
+      intImageNumber = intA_RemoteImageNumbers(intCount)
+      intArrIndex = intImageNumber ! but:
+        if (logArrIndexIsThisImage) intArrIndex = this_image()
+      if (intImageNumber .ne. this_image()) then ! (synchronization is only required between distinct images)
+        if (.not. logA_CheckImageStates(intCount)) then ! check is only required if the remote image is not already
+                                                        ! in state intCheckImageActivityFlag:
+          !
+          if (OOOPimscGAElement_check_atomic_intImageActivityFlag99_CA (OOOPimscImageStatus_CA_1, &
+                           intCheckImageActivityFlag, intArrayIndex = intArrIndex, &
+                           intAdditionalAtomicValue = intAtomicValue, logExecuteSyncMemory = .false.)) then
+            logA_CheckImageStates(intCount) = .true. ! the remote image is in state intCheckImageActivityFlag
+            !
+            if (present(intA_RemoteImageAndItsAdditionalAtomicValue)) then
+            ! save the remote image number together with its sent AdditionalAtomicValue:
+              intA_RemoteImageAndItsAdditionalAtomicValue(intCount,1) = intImageNumber
+              intA_RemoteImageAndItsAdditionalAtomicValue(intCount,2) = intAtomicValue
+            end if
+            !
+            ! record the remote image numbers that did complete the synchronization successfully:
+            if (present(intA_TheSuccessfulImageNumbers)) then
+              ! count how many images completed the synchronization successfully so far:
+              ! (to determine the current positon)
+              intCurrentPosition = count(logA_CheckImageStates)
+              ! save the successful remote image number:
+              intA_TheSuccessfulImageNumbers(intCurrentPosition) = intImageNumber
+            end if
+          end if
+        end if
+      else ! (intImageNumber .eq. this_image())
+        ! raise an error:
+                                                                call IIimsc_ErrorHandler (Object_CA, &
+                                                            "the executing image can't synchronize with itself yet", &
+                                                                  OOOGglob_error, status)
+                                                                !
+        logA_CheckImageStates(intCount) = .true. ! otherwise the outer do loop would turn into an endless loop
+      end if
+    end do
+    !
+    if (all(logA_CheckImageStates)) then ! all involved remote images are in state intCheckImageActivityFlag
+      if (logSyncMemoryExecution) call OOOPimsc_subSyncMemory (Object_CA) ! execute sync memory
+      exit ! exit the do loop if all involved remote images are in state
+                                         ! intCheckImageActivityFlag
+    end if
+    !
+    ! for leaving a fault synchronization do the following check:
+    if (present(intCheckRemoteAbortOfSynchronization)) then
+      if (OOOPimscGAElement_check_atomic_intImageActivityFlag99_CA (OOOPimscImageStatus_CA_1, &
+          intCheckImageActivityFlag = intCheckRemoteAbortOfSynchronization, intArrayIndex = this_image(), &
+          intAdditionalAtomicValue = intAtomicValue, logExecuteSyncMemory = .false.)) then
+        !
+        if (logSyncMemoryExecution) call OOOPimsc_subSyncMemory (Object_CA) ! execute sync memory
+        !
+        if (present(logRemoteAbortOfSynchronization)) then
+          logRemoteAbortOfSynchronization = .true.
+        end if
+        !
+        if (present(intRemoteImageThatDidTheAbort)) then
+          intRemoteImageThatDidTheAbort = intAtomicValue
+        end if
+        !
+        if (present(intNumberOfSuccessfulRemoteSynchronizations)) then
+          intNumberOfSuccessfulRemoteSynchronizations = count(logA_CheckImageStates)
+        end if
+        !
+        exit ! exit the do loop if the status is 'intCheckRemoteAbortOfSynchronization'
+             ! (i.e. a(nother) remote image does signal to abort the synchronization process)
+      end if
+    end if
+    !
+  end do
+  !
+  !**********************************************************************
+  !
+                                                                call OOOGglob_subResetProcedures
+  !
+end subroutine OOOPimscEventWaitScalar_intImageActivityFlag99_CA
+```
