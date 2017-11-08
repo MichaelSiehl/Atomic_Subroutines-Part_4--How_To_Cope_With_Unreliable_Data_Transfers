@@ -141,8 +141,7 @@ program Main
 end program Main
 ```
 # The customized Event Wait (EventWaitScalar)
-The customized Event Wait synchronization procedure (EventWaitScalar), in the OOOPimsc_admImageStatus_CA.f90 source code file, does contain a kind of emergency exit: the functionality to check for a synchronization abort through a customized Event Post from another coarray image. The EventWaitScalar does also provide the synchronization diagnostics through its optional arguments:
-
+The customized Event Wait synchronization procedure (EventWaitScalar), in the OOOPimsc_admImageStatus_CA.f90 source code file, does contain a kind of emergency exit: the functionality to check for a synchronization abort through a customized Event Post from another coarray image. The EventWaitScalar does also provide the synchronization diagnostics through its optional arguments. Only few lines of Fortran code were required to implement this:
 ```fortran
 subroutine OOOPimscEventWaitScalar_intImageActivityFlag99_CA (Object_CA, intCheckImageActivityFlag, &
                   intNumberOfImages, intA_RemoteImageNumbers, logArrayIndexIsThisImage, &
