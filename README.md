@@ -34,6 +34,6 @@ Here, the 'remote abort of synchronization status' is FALSE. Thus, the synchroni
  number of successful remote synchronizations:           0
  the successful image numbers:           0           0           0           0
 ```
-Here, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The ' number of successful remote synchronizations' is 0: none of the Event Post from the involved remote images did synchronize successfully with the customized Event Wait on image 1.<br />
+Here, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The ' number of successful remote synchronizations' is 0: none of the customized Event Post from the involved remote images did synchronize successfully with the customized Event Wait on image 1.<br />
 
 
