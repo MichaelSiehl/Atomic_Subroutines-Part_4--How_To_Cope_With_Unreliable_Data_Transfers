@@ -2,7 +2,7 @@
  Fortran 2008 coarray programming with unordered execution segments (user-defined ordering) and customized synchronization procedures - Atomic Subroutines - Part 4: How to cope with unreliable data transfers with low-level PGAS programming- allow for safe remote communication among a number of coarray images.
 
 # Overview
-We use Fortran 2008 atomic subroutines to implement customized (or user-defined) synchronization procedures. However, remote data transfer through ATOMIC_DEFINE can be rather unreliable and unstable: even with the exactly same setup there is no guarantee that a remote data transfer will complete successfully with actual processors (OpenCoarrays/gfortran/OpenMPI on a Linux system). Yet, we can't even be sure that future implementations will offer stable runtime-behavior of remote transfer with ATOMIC_DEFINE since even the Fortran language standard does seem to leave this processor-dependent.<br />
+We use Fortran 2008 atomic subroutines to implement customized (or user-defined) synchronization procedures. However, remote data transfer may fail (because of a coding error for an example).<br />
 <br />
 To overcome that problem, this GitHub repository contains a first implementation of a customized synchronization procedure that offers a synchronization diagnostics and allows for remote abort of a synchronization process from another coarray image (that itself is usually not involved with the regular synchronization process). Again, only few lines of Fortran code were required to accomplish that. <br />
 
@@ -49,7 +49,7 @@ involved remote images:                        2           3           4        
 Again, the 'remote abort of synchronization status' is TRUE. Thus, the synchronization process was aborted by another coarray image (image 6). The 'number of successful remote synchronizations' is 3: three of the involved remote images (2,3,4) did synchronize successfully with the customized Event Wait on image 1, one coarray image did fail to synchronize. The synchronization process (customized Event Post + customized Event Wait) must be repeated (a retry) only for the failed coarray image.<br />
 
 # Main.f90: a simple test case
-The test case should be compiled and run with 6 coarray images using OpenCoarrays/gfortran. Main.f90 contains the logic codes of this simple test case: on coarray image 1 we do execute the customized Event Wait to synchronize with a customized Event Post from coarray images 2,3,4,and 5; On coarray image 6 we do initiate (with a small time shift) a remote abort of the customized Event Wait on coarray image 1. (If necessary, we use one of the involved images 2,3,4,5 to do nothing on it so that the synchronization does (partly) fail). See the code of the test case in Main.f90:
+The test case should be compiled and run with 6 coarray images using OpenCoarrays/gfortran or ifort 18 uodate 1. Main.f90 contains the logic codes of this simple test case: on coarray image 1 we do execute the customized Event Wait to synchronize with a customized Event Post from coarray images 2,3,4,and 5; On coarray image 6 we do initiate (with a small time shift) a remote abort of the customized Event Wait on coarray image 1. (If necessary, we use one of the involved images 2,3,4,5 to do nothing on it so that the synchronization does (partly) fail). See the code of the test case in Main.f90:
 ```fortran
 program Main
   ! a simple test-case for the customized Event Post / Event Wait
