@@ -72,7 +72,6 @@ program Main
                          intAdditionalAtomicValue = this_image())
   !************************************************************************************************
   else ! on all other images do a customized Event Post as part of the synchronization:
-       ! (with current processors (OpenCoarrays/gfortran) it is highly possible that this may fail)
     intRemoteImageNumber = 1
     intImageActivityFlag = OOOPimscEnum_ImageActivityFlag % InitiateASynchronization
     intAdditionalAtomicValue = this_image() * 2 ! only a test case
