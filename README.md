@@ -7,7 +7,7 @@ We use Fortran 2008 atomic subroutines to implement customized (or user-defined)
 To overcome that problem, this GitHub repository contains a first implementation of a customized synchronization procedure that offers a synchronization diagnostics and allows for remote abort of a synchronization process from another coarray image (that itself is usually not involved with the regular synchronization process). Again, only few lines of Fortran code were required to accomplish that. <br />
 
 # How it works
-The code implements customized (or user-defined) Event Post and Event Wait procedures: EventPostScalar and EventWaitScalar do have functionality that is similar to Fortran 2015 Events with the addition that the customized version does allow to transfer additional scalar data together with the synchronization. Further, the customized version does offer a synchronization diagnostic, even if the synchronization process gets aborted remotely (from another coarray image).
+The code implements customized (or user-defined) Event Post and Event Wait procedures: EventPostScalar and EventWaitScalar do have functionality that is similar to Fortran 2018 Events with the addition that the customized version does allow to transfer additional scalar data together with the synchronization. Further, the customized version does offer a synchronization diagnostic, even if the synchronization process gets aborted remotely (from another coarray image).
 See the following outputs from distinct program runs:<br />
 
 
